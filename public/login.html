@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Login — TechMart</title>
+
+  <link rel="stylesheet" href="/styles.css">
+
+</head>
+
+<body class="auth-page">
+
+<header class="simple-navbar">
+
+  <a href="/" class="brand">
+    TechMart
+  </a>
+
+  <a href="/" class="back-link">
+    Back to store
+  </a>
+
+</header>
+
+
+<main class="auth-container">
+
+  <section
+    id="loginCard"
+    class="auth-card"
+  >
+
+    <div class="auth-header">
+
+      <p class="eyebrow">
+        Welcome back
+      </p>
+
+      <h1>
+        Sign in
+      </h1>
+
+      <p>
+        Access your TechMart account.
+      </p>
+
+    </div>
+
+
+    <form id="loginForm">
+
+      <div class="form-group">
+
+        <label for="email">
+          Email
+        </label>
+
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="password">
+          Password
+        </label>
+
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Enter your password"
+          required
+        >
+
+      </div>
+
+
+      <div
+        id="loginError"
+        class="form-message error-message hidden"
+      ></div>
+
+
+      <button
+        type="submit"
+        class="primary-button full-width"
+      >
+        Sign in
+      </button>
+
+    </form>
+
+
+    <p class="auth-footer">
+      Don't have an account?
+      <a href="/register.html">
+        Create one
+      </a>
+    </p>
+
+  </section>
+
+
+  <section
+    id="mfaCard"
+    class="auth-card hidden"
+  >
+
+    <div class="auth-header">
+
+      <p class="eyebrow">
+        Verification
+      </p>
+
+      <h1>
+        Verify your identity
+      </h1>
+
+      <p>
+        Enter the 6-digit code from your authenticator app.
+      </p>
+
+    </div>
+
+
+    <form id="mfaLoginForm">
+
+      <div class="form-group">
+
+        <label for="mfaCode">
+          Verification code
+        </label>
+
+        <input
+          id="mfaCode"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]{6}"
+          maxlength="6"
+          autocomplete="one-time-code"
+          placeholder="000000"
+          class="otp-input"
+          required
+        >
+
+      </div>
+
+
+      <div
+        id="mfaError"
+        class="form-message error-message hidden"
+      ></div>
+
+
+      <button
+        type="submit"
+        class="primary-button full-width"
+      >
+        Verify
+      </button>
+
+    </form>
+
+
+    <button
+      id="backToLogin"
+      class="secondary-button full-width"
+      type="button"
+    >
+      Back to login
+    </button>
+
+  </section>
+
+</main>
+
+
+<script>
+
+const loginForm = document.getElementById("loginForm");
+const mfaLoginForm = document.getElementById("mfaLoginForm");
+
+const loginCard = document.getElementById("loginCard");
+const mfaCard = document.getElementById("mfaCard");
+
+const loginError = document.getElementById("loginError");
+const mfaError = document.getElementById("mfaError");
+
+const backToLogin =
+  document.getElementById("backToLogin");
+
+
+function showMessage(element, message) {
+
+  element.textContent = message;
+  element.classList.remove("hidden");
+
+}
+
+
+function hideMessage(element) {
+
+  element.textContent = "";
+  element.classList.add("hidden");
+
+}
+
+
+loginForm.addEventListener("submit", async (event) => {
+
+  event.preventDefault();
+
+  hideMessage(loginError);
+
+  const formData = new FormData(loginForm);
+
+  const email = formData.get("email");
+  const password = formData.get("password");
+
+
+  try {
+
+    const response = await fetch("/api/login", {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        email,
+        password
+      })
+
+    });
+
+
+    const data = await response.json();
+
+
+    if (!response.ok) {
+
+      showMessage(
+        loginError,
+        data.error || "Unable to sign in."
+      );
+
+      return;
+    }
+
+
+    if (data.requiresMfa) {
+
+      loginCard.classList.add("hidden");
+      mfaCard.classList.remove("hidden");
+
+      document
+        .getElementById("mfaCode")
+        .focus();
+
+      return;
+    }
+
+
+    window.location.href = "/";
+
+  } catch (error) {
+
+    showMessage(
+      loginError,
+      "Unable to connect to the server."
+    );
+
+  }
+
+});
+
+
+mfaLoginForm.addEventListener("submit", async (event) => {
+
+  event.preventDefault();
+
+  hideMessage(mfaError);
+
+  const code =
+    document.getElementById("mfaCode").value.trim();
+
+
+  try {
+
+    const response = await fetch("/api/login/mfa", {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        code
+      })
+
+    });
+
+
+    const data = await response.json();
+
+
+    if (!response.ok) {
+
+      showMessage(
+        mfaError,
+        data.error || "Invalid verification code."
+      );
+
+      return;
+    }
+
+
+    window.location.href = "/";
+
+  } catch (error) {
+
+    showMessage(
+      mfaError,
+      "Unable to connect to the server."
+    );
+
+  }
+
+});
+
+
+backToLogin.addEventListener("click", () => {
+
+  mfaCard.classList.add("hidden");
+  loginCard.classList.remove("hidden");
+
+  document
+    .getElementById("mfaCode")
+    .value = "";
+
+  hideMessage(mfaError);
+
+});
+
+</script>
+
+</body>
+</html>

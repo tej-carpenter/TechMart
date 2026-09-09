@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Create Account — TechMart</title>
+
+  <link rel="stylesheet" href="/styles.css">
+
+</head>
+
+<body class="auth-page">
+
+<header class="simple-navbar">
+
+  <a href="/" class="brand">
+    TechMart
+  </a>
+
+  <a href="/" class="back-link">
+    Back to store
+  </a>
+
+</header>
+
+
+<main class="auth-container">
+
+  <section class="auth-card">
+
+    <div class="auth-header">
+
+      <p class="eyebrow">
+        Get started
+      </p>
+
+      <h1>
+        Create your account
+      </h1>
+
+      <p>
+        Shop smarter with a TechMart account.
+      </p>
+
+    </div>
+
+
+    <form id="registerForm">
+
+      <div class="form-group">
+
+        <label for="name">
+          Full name
+        </label>
+
+        <input
+          id="name"
+          name="name"
+          type="text"
+          autocomplete="name"
+          placeholder="Your name"
+          maxlength="100"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="email">
+          Email
+        </label>
+
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="password">
+          Password
+        </label>
+
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="new-password"
+          placeholder="At least 8 characters"
+          minlength="8"
+          maxlength="128"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="confirmPassword">
+          Confirm password
+        </label>
+
+        <input
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          autocomplete="new-password"
+          placeholder="Enter your password again"
+          required
+        >
+
+      </div>
+
+
+      <div
+        id="registerError"
+        class="form-message error-message hidden"
+      ></div>
+
+
+      <div
+        id="registerSuccess"
+        class="form-message success-message hidden"
+      ></div>
+
+
+      <button
+        type="submit"
+        class="primary-button full-width"
+      >
+        Create account
+      </button>
+
+    </form>
+
+
+    <p class="auth-footer">
+
+      Already have an account?
+
+      <a href="/login.html">
+        Sign in
+      </a>
+
+    </p>
+
+  </section>
+
+</main>
+
+
+<script>
+
+const registerForm =
+  document.getElementById("registerForm");
+
+const registerError =
+  document.getElementById("registerError");
+
+const registerSuccess =
+  document.getElementById("registerSuccess");
+
+
+function showMessage(element, message) {
+
+  element.textContent = message;
+  element.classList.remove("hidden");
+
+}
+
+
+function hideMessage(element) {
+
+  element.textContent = "";
+  element.classList.add("hidden");
+
+}
+
+
+registerForm.addEventListener("submit", async (event) => {
+
+  event.preventDefault();
+
+  hideMessage(registerError);
+  hideMessage(registerSuccess);
+
+
+  const formData =
+    new FormData(registerForm);
+
+
+  const name =
+    formData.get("name").trim();
+
+  const email =
+    formData.get("email").trim();
+
+  const password =
+    formData.get("password");
+
+  const confirmPassword =
+    formData.get("confirmPassword");
+
+
+  if (password !== confirmPassword) {
+
+    showMessage(
+      registerError,
+      "Passwords do not match."
+    );
+
+    return;
+  }
+
+
+  if (password.length < 8) {
+
+    showMessage(
+      registerError,
+      "Password must contain at least 8 characters."
+    );
+
+    return;
+  }
+
+
+  try {
+
+    const response = await fetch(
+      "/api/register",
+      {
+
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+          name,
+          email,
+          password
+        })
+
+      }
+    );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      showMessage(
+        registerError,
+        data.error || "Unable to create the account."
+      );
+
+      return;
+    }
+
+
+    showMessage(
+      registerSuccess,
+      "Account created successfully. Redirecting to sign in..."
+    );
+
+
+    registerForm.reset();
+
+
+    setTimeout(() => {
+
+      window.location.href =
+        "/login.html";
+
+    }, 1500);
+
+
+  } catch (error) {
+
+    showMessage(
+      registerError,
+      "Unable to connect to the server."
+    );
+
+  }
+
+});
+
+</script>
+
+</body>
+</html>

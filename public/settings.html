@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Security & Privacy — TechMart</title>
+
+  <link rel="stylesheet" href="/styles.css">
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+  <a href="/" class="brand">
+    TechMart
+  </a>
+
+  <nav class="nav-links">
+    <a href="/">Home</a>
+  </nav>
+
+  <div class="nav-actions">
+
+    <div
+      id="securityStatus"
+      class="security-status hidden"
+    ></div>
+
+    <button
+      id="logoutButton"
+      class="nav-button"
+      type="button"
+    >
+      Logout
+    </button>
+
+  </div>
+
+</header>
+
+
+<main class="settings-container">
+
+  <div class="settings-heading">
+
+    <p class="eyebrow">
+      Account
+    </p>
+
+    <h1>
+      Security & Privacy
+    </h1>
+
+    <p>
+      Manage your account security and privacy preferences.
+    </p>
+
+  </div>
+
+
+  <!-- Security -->
+
+  <section class="settings-card">
+
+    <div class="settings-card-header">
+
+      <div>
+
+        <p class="eyebrow">
+          Security
+        </p>
+
+        <h2>
+          Two-step verification
+        </h2>
+
+      </div>
+
+      <span
+        id="mfaStatus"
+        class="status-pill"
+      >
+        Not enabled
+      </span>
+
+    </div>
+
+
+    <p class="settings-description">
+
+      Add an authenticator app to your account
+      for an additional verification step when signing in.
+
+    </p>
+
+
+    <div
+      id="mfaDisabledPanel"
+      class="settings-action-panel"
+    >
+
+      <h3>
+        Set up an authenticator app
+      </h3>
+
+      <p>
+        Use an authenticator app to generate
+        verification codes for your account.
+      </p>
+
+      <button
+        id="startMfaButton"
+        class="primary-button"
+        type="button"
+      >
+        Set up authenticator app
+      </button>
+
+    </div>
+
+
+    <div
+      id="mfaSetupPanel"
+      class="mfa-setup hidden"
+    >
+
+      <div class="mfa-step">
+
+        <span class="step-number">
+          1
+        </span>
+
+        <div>
+
+          <h3>
+            Scan the QR code
+          </h3>
+
+          <p>
+            Open your authenticator app and scan
+            the QR code below.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="qr-container">
+
+        <img
+          id="qrCode"
+          alt="Authenticator setup QR code"
+        >
+
+      </div>
+
+
+      <details class="manual-key">
+
+        <summary>
+          Can't scan the QR code?
+        </summary>
+
+        <div>
+
+          <p>
+            Enter this setup key manually in your authenticator app.
+          </p>
+
+          <code id="manualKey">
+          </code>
+
+        </div>
+
+      </details>
+
+
+      <div class="mfa-step">
+
+        <span class="step-number">
+          2
+        </span>
+
+        <div>
+
+          <h3>
+            Enter the verification code
+          </h3>
+
+          <p>
+            Enter the current 6-digit code from your authenticator app.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="setupCode">
+          Verification code
+        </label>
+
+        <input
+          id="setupCode"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="000000"
+          class="otp-input"
+        >
+
+      </div>
+
+
+      <div
+        id="mfaSetupMessage"
+        class="form-message hidden"
+      ></div>
+
+
+      <div class="button-row">
+
+        <button
+          id="confirmMfaButton"
+          class="primary-button"
+          type="button"
+        >
+          Confirm setup
+        </button>
+
+        <button
+          id="cancelMfaButton"
+          class="secondary-button"
+          type="button"
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      id="mfaEnabledPanel"
+      class="settings-action-panel enabled-panel hidden"
+    >
+
+      <div class="enabled-icon">
+        ✓
+      </div>
+
+      <div>
+
+        <h3>
+          Two-step verification is enabled
+        </h3>
+
+        <p>
+          Your account requires an authenticator code
+          when signing in.
+        </p>
+
+      </div>
+
+      <button
+        id="disableMfaButton"
+        class="danger-button"
+        type="button"
+      >
+        Disable two-step verification
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- Password -->
+
+  <section class="settings-card">
+
+    <div class="settings-card-header">
+
+      <div>
+
+        <p class="eyebrow">
+          Account
+        </p>
+
+        <h2>
+          Change password
+        </h2>
+
+      </div>
+
+    </div>
+
+
+    <form id="passwordForm">
+
+      <div class="form-group">
+
+        <label for="currentPassword">
+          Current password
+        </label>
+
+        <input
+          id="currentPassword"
+          type="password"
+          autocomplete="current-password"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="newPassword">
+          New password
+        </label>
+
+        <input
+          id="newPassword"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        >
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label for="confirmNewPassword">
+          Confirm new password
+        </label>
+
+        <input
+          id="confirmNewPassword"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        >
+
+      </div>
+
+
+      <div
+        id="passwordMessage"
+        class="form-message hidden"
+      ></div>
+
+
+      <button
+        class="primary-button"
+        type="submit"
+      >
+        Change password
+      </button>
+
+    </form>
+
+  </section>
+
+
+  <!-- Privacy -->
+
+  <section class="settings-card">
+
+    <div class="settings-card-header">
+
+      <div>
+
+        <p class="eyebrow">
+          Privacy
+        </p>
+
+        <h2>
+          Privacy preferences
+        </h2>
+
+      </div>
+
+    </div>
+
+
+    <div class="preference-row">
+
+      <div>
+
+        <h3>
+          Marketing emails
+        </h3>
+
+        <p>
+          Receive information about new products and offers.
+        </p>
+
+      </div>
+
+      <label class="switch">
+
+        <input
+          id="marketingEmails"
+          type="checkbox"
+        >
+
+        <span class="slider"></span>
+
+      </label>
+
+    </div>
+
+
+    <div class="preference-row">
+
+      <div>
+
+        <h3>
+          Personalized recommendations
+        </h3>
+
+        <p>
+          Allow product recommendations based on your activity.
+        </p>
+
+      </div>
+
+      <label class="switch">
+
+        <input
+          id="personalizedRecommendations"
+          type="checkbox"
+        >
+
+        <span class="slider"></span>
+
+      </label>
+
+    </div>
+
+
+    <div class="preference-row">
+
+      <div>
+
+        <h3>
+          Profile visibility
+        </h3>
+
+        <p>
+          Allow your profile to be visible to other users.
+        </p>
+
+      </div>
+
+      <label class="switch">
+
+        <input
+          id="profileVisibility"
+          type="checkbox"
+        >
+
+        <span class="slider"></span>
+
+      </label>
+
+    </div>
+
+
+    <div
+      id="privacyMessage"
+      class="form-message hidden"
+    ></div>
+
+
+    <button
+      id="savePrivacyButton"
+      class="primary-button"
+      type="button"
+    >
+      Save preferences
+    </button>
+
+  </section>
+
+</main>
+
+
+<!-- Disable MFA modal -->
+
+<div
+  id="disableModal"
+  class="modal hidden"
+>
+
+  <div class="modal-card">
+
+    <button
+      id="closeDisableModal"
+      class="modal-close"
+      type="button"
+    >
+      ×
+    </button>
+
+    <p class="eyebrow">
+      Verification required
+    </p>
+
+    <h2>
+      Disable two-step verification
+    </h2>
+
+    <p>
+      Enter your current authenticator code to continue.
+    </p>
+
+
+    <div class="form-group">
+
+      <label for="disableCode">
+        Verification code
+      </label>
+
+      <input
+        id="disableCode"
+        type="text"
+        inputmode="numeric"
+        maxlength="6"
+        placeholder="000000"
+        class="otp-input"
+      >
+
+    </div>
+
+
+    <div
+      id="disableMessage"
+      class="form-message hidden"
+    ></div>
+
+
+    <button
+      id="confirmDisableButton"
+      class="danger-button full-width"
+      type="button"
+    >
+      Disable
+    </button>
+
+  </div>
+
+</div>
+
+
+<div
+  id="toast"
+  class="toast"
+></div>
+
+
+<script src="/app.js"></script>
+
+</body>
+</html>
