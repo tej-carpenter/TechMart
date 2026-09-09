@@ -1,247 +1,111 @@
-# TechMart
+# TechMart — MFA E-commerce Lab
 
-Secure e-commerce website with Multi-Factor Authentication.
-
-## Project
-
-TechMart is a small electronics e-commerce application developed for a Cyber Security laboratory project.
-
-The primary security feature is TOTP-based Multi-Factor Authentication.
+A free local e-commerce demonstration website for a cybersecurity lab.
 
 ## Features
 
-- User registration
-- Secure password hashing
-- Login authentication
-- TOTP-based MFA
-- Authenticator app QR enrollment
-- Manual MFA setup key
+- Home page
+- Product browsing and category filters
+- Client-side shopping cart
+- Registration
+- Login
+- Password hashing with bcrypt
+- TOTP MFA using authenticator apps
+- QR-code MFA setup
 - MFA verification during login
-- MFA enable/disable
-- Account security status
-- Security and privacy settings
-- Password change
-- Product catalogue
-- Shopping cart
-- Checkout
-- SQLite database
-- Authentication rate limiting
-- Security headers
-- Secure HTTP-only session cookie
-
-## Technology
-
-- Node.js
-- Express
-- SQLite
-- better-sqlite3
-- bcryptjs
-- otplib
-- QRCode
-- cookie-session
-- Helmet
-- express-rate-limit
-
-All technologies are free and open source.
+- Security & Privacy settings
+- Navbar status: "Account secured" / "Account not secured"
+- SQLite local database
+- No paid APIs or services
+- Responsive CSS
 
 ## Requirements
 
-Node.js 20 or later.
+- Node.js 22 LTS
+- npm
+- GitHub Codespaces, VS Code, or another local Node environment
 
-## Installation
+## Run in GitHub Codespaces
 
-Open a terminal inside the project directory.
+```bash
+nvm install 22
+nvm use 22
+node -v
+```
 
-Install dependencies:
+Then:
 
+```bash
+rm -rf node_modules
 npm install
+```
 
-## Environment configuration
+If npm shows:
 
-Copy:
+```text
+npm warn install-scripts ... better-sqlite3 ... not yet covered by allowScripts
+```
 
-.env.example
+run:
 
-to:
+```bash
+npm install-scripts approve better-sqlite3
+npm rebuild better-sqlite3
+```
 
-.env
+If the command above is not available in your npm version, rebuild from source:
 
-Example:
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential python3
+npm rebuild better-sqlite3 --build-from-source
+```
 
-PORT=3000
-SESSION_SECRET=replace-with-a-long-random-secret
-NODE_ENV=development
+Start the site:
 
-## Run
-
-Start the server:
-
+```bash
 npm start
+```
 
-Open:
+For development:
 
-http://localhost:3000
-
-## Development mode
-
-Use:
-
+```bash
 npm run dev
+```
 
-## MFA demonstration
+Codespaces will show a forwarded port. Open port 3000.
 
-### Step 1
+## Important
 
-Create an account.
+Do not run `npm audit fix` before the project is working. It can change dependency versions and is unnecessary for fixing a CSS/static-file problem.
 
-### Step 2
+## MFA test procedure
 
-Login using the email and password.
-
-Because MFA is not enabled, the user goes directly into the store.
-
-The navbar displays:
-
-Account not secured
-
-### Step 3
-
-Open:
-
-Account → Security & Privacy
-
-### Step 4
-
-Select:
-
-Set up authenticator app
-
-A QR code will be generated.
-
-Scan it using an authenticator application.
-
-### Step 5
-
-Enter the current 6-digit code.
-
-After successful verification, MFA becomes enabled.
-
-The navbar changes to:
-
-Account secured
-
-### Step 6
-
-Logout.
-
-### Step 7
-
-Login again.
-
-Enter the correct email and password.
-
-The application now requests the authenticator code.
-
-### Step 8
-
-Enter an incorrect code.
-
-The login is rejected.
-
-### Step 9
-
-Enter the current correct authenticator code.
-
-Login succeeds.
-
-## MFA architecture
-
-The login process is:
-
-User
-↓
-Email + Password
-↓
-Server validates password
-↓
-Is MFA enabled?
-↓
-YES
-↓
-TOTP verification
-↓
-Correct code?
-↓
-YES
-↓
-Authenticated session
-
-The application does not treat the TOTP code as a replacement for the password.
-
-Both authentication factors are required.
-
-## TOTP
-
-TOTP stands for Time-Based One-Time Password.
-
-The authenticator application generates a changing six-digit code based on:
-
-- A shared secret
-- The current time
-
-The server independently calculates/verifies the expected code.
-
-The application does not store the generated six-digit codes.
-
-## Password security
-
-Passwords are hashed using bcrypt.
-
-Plaintext passwords are never stored in the database.
+1. Open Register.
+2. Create an account.
+3. Log in normally.
+4. Open Security & Privacy.
+5. Under Multi-factor authentication, click Set up MFA.
+6. Scan the QR code with Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app.
+7. Enter the six-digit code.
+8. MFA becomes enabled.
+9. The navbar changes to "Account secured".
+10. Log out.
+11. Log in again with the same password.
+12. The site asks for the authenticator code.
+13. Enter the current six-digit TOTP code.
+14. Login completes.
 
 ## Database
 
-SQLite is used for local development.
+The SQLite database is created automatically at:
 
-Tables:
+```text
+data/techmart.db
+```
 
-users
-products
-orders
-order_items
-login_attempts
-privacy_settings
+The `data` directory is created automatically by the server.
 
-## Security status
+## Lab note
 
-The navbar displays:
-
-Account secured
-
-when MFA is enabled.
-
-Otherwise:
-
-Account not secured
-
-The status is generated from the authenticated user's account state.
-
-## Important limitation
-
-This application is designed as a local educational project.
-
-It should not be deployed to a production environment without additional security review and production-grade infrastructure.
-
-For a production system, additional protections would be appropriate, including:
-
-- Persistent server-side session storage
-- CSRF protection
-- Strong production secrets
-- HTTPS
-- Secure secret management
-- Account recovery controls
-- Backup/recovery MFA mechanisms
-- More extensive authorization controls
-- Monitoring and logging
-- Production database configuration
-- Secure deployment configuration
+This project is designed as a local educational demonstration. It uses a local SQLite database and an Express session store intended for a lab environment, not production deployment.

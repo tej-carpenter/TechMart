@@ -1,311 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>Create Account — TechMart</title>
-
-  <link rel="stylesheet" href="/styles.css">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create account — TechMart</title>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-
 <body class="auth-page">
+  <header class="site-header">
+    <nav class="nav container">
+      <a class="brand" href="/">Tech<span>Mart</span></a>
+      <div class="nav-links"><a href="/products.html">Products</a><a href="/products.html">Categories</a></div>
+      <div class="nav-actions"><a class="nav-login" href="/login.html">Login</a></div>
+    </nav>
+  </header>
 
-<header class="simple-navbar">
+  <main class="auth-main">
+    <div class="auth-card">
+      <p class="eyebrow">Join TechMart</p>
+      <h1>Create account</h1>
+      <p class="muted">Create an account and enable MFA later from Security & Privacy.</p>
 
-  <a href="/" class="brand">
-    TechMart
-  </a>
-
-  <a href="/" class="back-link">
-    Back to store
-  </a>
-
-</header>
-
-
-<main class="auth-container">
-
-  <section class="auth-card">
-
-    <div class="auth-header">
-
-      <p class="eyebrow">
-        Get started
-      </p>
-
-      <h1>
-        Create your account
-      </h1>
-
-      <p>
-        Shop smarter with a TechMart account.
-      </p>
-
+      <form id="registerForm" class="form">
+        <label>Full name
+          <input type="text" name="name" autocomplete="name" minlength="2" maxlength="80" required>
+        </label>
+        <label>Email
+          <input type="email" name="email" autocomplete="email" required>
+        </label>
+        <label>Password
+          <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+        </label>
+        <p class="password-help">Use at least 8 characters.</p>
+        <div class="form-message" id="registerMessage"></div>
+        <button class="button button-primary full-width" type="submit">Create account</button>
+      </form>
+      <p class="form-footer">Already registered? <a href="/login.html">Sign in</a></p>
     </div>
+  </main>
 
-
-    <form id="registerForm">
-
-      <div class="form-group">
-
-        <label for="name">
-          Full name
-        </label>
-
-        <input
-          id="name"
-          name="name"
-          type="text"
-          autocomplete="name"
-          placeholder="Your name"
-          maxlength="100"
-          required
-        >
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label for="email">
-          Email
-        </label>
-
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autocomplete="email"
-          placeholder="you@example.com"
-          required
-        >
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label for="password">
-          Password
-        </label>
-
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="new-password"
-          placeholder="At least 8 characters"
-          minlength="8"
-          maxlength="128"
-          required
-        >
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label for="confirmPassword">
-          Confirm password
-        </label>
-
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          autocomplete="new-password"
-          placeholder="Enter your password again"
-          required
-        >
-
-      </div>
-
-
-      <div
-        id="registerError"
-        class="form-message error-message hidden"
-      ></div>
-
-
-      <div
-        id="registerSuccess"
-        class="form-message success-message hidden"
-      ></div>
-
-
-      <button
-        type="submit"
-        class="primary-button full-width"
-      >
-        Create account
-      </button>
-
-    </form>
-
-
-    <p class="auth-footer">
-
-      Already have an account?
-
-      <a href="/login.html">
-        Sign in
-      </a>
-
-    </p>
-
-  </section>
-
-</main>
-
-
-<script>
-
-const registerForm =
-  document.getElementById("registerForm");
-
-const registerError =
-  document.getElementById("registerError");
-
-const registerSuccess =
-  document.getElementById("registerSuccess");
-
-
-function showMessage(element, message) {
-
-  element.textContent = message;
-  element.classList.remove("hidden");
-
-}
-
-
-function hideMessage(element) {
-
-  element.textContent = "";
-  element.classList.add("hidden");
-
-}
-
-
-registerForm.addEventListener("submit", async (event) => {
-
-  event.preventDefault();
-
-  hideMessage(registerError);
-  hideMessage(registerSuccess);
-
-
-  const formData =
-    new FormData(registerForm);
-
-
-  const name =
-    formData.get("name").trim();
-
-  const email =
-    formData.get("email").trim();
-
-  const password =
-    formData.get("password");
-
-  const confirmPassword =
-    formData.get("confirmPassword");
-
-
-  if (password !== confirmPassword) {
-
-    showMessage(
-      registerError,
-      "Passwords do not match."
-    );
-
-    return;
-  }
-
-
-  if (password.length < 8) {
-
-    showMessage(
-      registerError,
-      "Password must contain at least 8 characters."
-    );
-
-    return;
-  }
-
-
-  try {
-
-    const response = await fetch(
-      "/api/register",
-      {
-
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-          name,
-          email,
-          password
-        })
-
-      }
-    );
-
-
-    const data =
-      await response.json();
-
-
-    if (!response.ok) {
-
-      showMessage(
-        registerError,
-        data.error || "Unable to create the account."
-      );
-
-      return;
-    }
-
-
-    showMessage(
-      registerSuccess,
-      "Account created successfully. Redirecting to sign in..."
-    );
-
-
-    registerForm.reset();
-
-
-    setTimeout(() => {
-
-      window.location.href =
-        "/login.html";
-
-    }, 1500);
-
-
-  } catch (error) {
-
-    showMessage(
-      registerError,
-      "Unable to connect to the server."
-    );
-
-  }
-
-});
-
-</script>
-
+  <script src="/js/auth.js" defer></script>
 </body>
 </html>

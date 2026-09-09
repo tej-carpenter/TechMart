@@ -1,1016 +1,340 @@
-import "dotenv/config";
-
 import express from "express";
-import helmet from "helmet";
-import cookieSession from "cookie-session";
+import session from "express-session";
 import bcrypt from "bcryptjs";
-import rateLimit from "express-rate-limit";
-import { authenticator } from "otplib";
 import QRCode from "qrcode";
+import { authenticator } from "otplib";
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
-
 import db from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT || 3000);
 const SESSION_SECRET =
   process.env.SESSION_SECRET ||
-  "development-only-secret-change-this";
+  "techmart-lab-development-secret-change-this-in-production";
 
 app.disable("x-powered-by");
-
-app.use(
-  helmet({
-    crossOriginResourcePolicy: {
-      policy: "cross-origin"
-    }
-  })
-);
 
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: false }));
 
 app.use(
-  cookieSession({
-    name: "techmart_session",
-    keys: [SESSION_SECRET],
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 1000 * 60 * 60 * 4
+  session({
+    name: "techmart.sid",
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 4
+    }
   })
 );
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: {
-    error: "Too many authentication attempts. Please try again later."
-  }
-});
+app.use(express.static(path.join(__dirname, "public"), {
+  extensions: ["html"]
+}));
 
-const mfaLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
-  limit: 10,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: {
-    error: "Too many verification attempts. Please try again later."
-  }
-});
+const products = [
+  { id: 1, name: "TechBook Pro 14", category: "Laptops", price: 74999, description: "14-inch productivity laptop with a modern aluminium design.", badge: "Popular" },
+  { id: 2, name: "TechBook Air 13", category: "Laptops", price: 62999, description: "Lightweight laptop for study, work and everyday use.", badge: "New" },
+  { id: 3, name: "Nova X5", category: "Smartphones", price: 39999, description: "Fast 5G smartphone with a bright AMOLED display.", badge: "Best seller" },
+  { id: 4, name: "Nova Lite", category: "Smartphones", price: 21999, description: "Balanced smartphone with a long-lasting battery.", badge: "Value" },
+  { id: 5, name: "SoundCore Studio", category: "Audio", price: 8999, description: "Wireless over-ear headphones with active noise cancellation.", badge: "Featured" },
+  { id: 6, name: "Pocket Buds", category: "Audio", price: 3499, description: "Compact wireless earbuds with a charging case.", badge: "Popular" },
+  { id: 7, name: "KeyPro Mechanical", category: "Accessories", price: 4999, description: "Mechanical keyboard with hot-swappable switches.", badge: "New" },
+  { id: 8, name: "Precision Mouse", category: "Accessories", price: 2299, description: "Ergonomic wireless mouse for work and gaming.", badge: "Value" },
+  { id: 9, name: "GameBox S", category: "Gaming", price: 45999, description: "Compact gaming console for living-room entertainment.", badge: "Popular" },
+  { id: 10, name: "UltraView 27", category: "Monitors", price: 24999, description: "27-inch QHD monitor with a fast refresh rate.", badge: "Featured" },
+  { id: 11, name: "UltraView 24", category: "Monitors", price: 13999, description: "24-inch Full HD monitor for work and study.", badge: "Value" },
+  { id: 12, name: "GamePad Pro", category: "Gaming", price: 5999, description: "Wireless controller with precise analogue controls.", badge: "New" }
+];
 
-app.use(express.static(path.join(__dirname, "public")));
-
-function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
+function publicUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    mfaEnabled: Boolean(user.mfa_enabled)
+  };
 }
 
-function validEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function clientIp(req) {
-  return (
-    req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
-    req.socket.remoteAddress ||
-    "unknown"
-  );
-}
-
-function logAttempt({
-  userId = null,
-  email = null,
-  success = false,
-  req,
-  attemptType
-}) {
-  db.prepare(`
-    INSERT INTO login_attempts
-    (user_id, email, success, ip_address, attempt_type)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    userId,
-    email,
-    success ? 1 : 0,
-    clientIp(req),
-    attemptType
-  );
-}
-
-function getUserById(id) {
+function currentUser(req) {
+  if (!req.session.userId) return null;
   return db
-    .prepare(`
-      SELECT
-        id,
-        name,
-        email,
-        mfa_enabled,
-        created_at
-      FROM users
-      WHERE id = ?
-    `)
-    .get(id);
-}
-
-function getUserWithSecretById(id) {
-  return db
-    .prepare(`
-      SELECT *
-      FROM users
-      WHERE id = ?
-    `)
-    .get(id);
+    .prepare("SELECT id, name, email, mfa_enabled FROM users WHERE id = ?")
+    .get(req.session.userId);
 }
 
 function requireAuth(req, res, next) {
-  if (!req.session?.userId) {
-    return res.status(401).json({
-      error: "Authentication required."
-    });
-  }
-
-  const user = getUserById(req.session.userId);
-
+  const user = currentUser(req);
   if (!user) {
-    req.session = null;
-
-    return res.status(401).json({
-      error: "Authentication required."
-    });
+    return res.status(401).json({ error: "Authentication required." });
   }
-
   req.user = user;
   next();
 }
 
-function requireRecentMfa(req, res, next) {
-  if (!req.session?.userId) {
-    return res.status(401).json({
-      error: "Authentication required."
-    });
-  }
-
-  if (!req.session.mfaVerified) {
-    return res.status(403).json({
-      error: "Additional verification required."
-    });
-  }
-
-  next();
+function logEvent(userId, event, success) {
+  db.prepare(
+    "INSERT INTO login_events (user_id, event, success) VALUES (?, ?, ?)"
+  ).run(userId ?? null, event, success ? 1 : 0);
 }
 
-/*
-|--------------------------------------------------------------------------
-| General routes
-|--------------------------------------------------------------------------
-*/
+function cleanEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function validPassword(password) {
+  return typeof password === "string" && password.length >= 8 && password.length <= 128;
+}
 
 app.get("/api/products", (req, res) => {
-  const products = db
-    .prepare(`
-      SELECT
-        id,
-        name,
-        description,
-        price,
-        category,
-        image,
-        stock
-      FROM products
-      ORDER BY id
-    `)
-    .all();
-
-  res.json({ products });
+  const category = String(req.query.category || "").trim();
+  const result = category
+    ? products.filter((p) => p.category.toLowerCase() === category.toLowerCase())
+    : products;
+  res.json(result);
 });
 
-app.get("/api/me", (req, res) => {
-  if (!req.session?.userId) {
-    return res.json({
-      authenticated: false
-    });
+app.get("/api/auth/me", (req, res) => {
+  const user = currentUser(req);
+  res.json({
+    authenticated: Boolean(user),
+    user: publicUser(user)
+  });
+});
+
+app.post("/api/auth/register", async (req, res) => {
+  const name = String(req.body.name || "").trim();
+  const email = cleanEmail(req.body.email);
+  const password = req.body.password;
+
+  if (name.length < 2 || name.length > 80) {
+    return res.status(400).json({ error: "Enter a valid name." });
   }
 
-  const user = getUserById(req.session.userId);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Enter a valid email address." });
+  }
+
+  if (!validPassword(password)) {
+    return res.status(400).json({ error: "Password must contain at least 8 characters." });
+  }
+
+  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+  if (existing) {
+    return res.status(409).json({ error: "An account with this email already exists." });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const result = db
+    .prepare("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)")
+    .run(name, email, passwordHash);
+
+  logEvent(result.lastInsertRowid, "registration", true);
+
+  res.status(201).json({
+    message: "Account created successfully.",
+    redirect: "/login.html"
+  });
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const email = cleanEmail(req.body.email);
+  const password = req.body.password;
+
+  const user = db
+    .prepare("SELECT * FROM users WHERE email = ?")
+    .get(email);
 
   if (!user) {
-    req.session = null;
+    logEvent(null, "login", false);
+    return res.status(401).json({ error: "Invalid email or password." });
+  }
+
+  const passwordMatches = await bcrypt.compare(password || "", user.password_hash);
+
+  if (!passwordMatches) {
+    logEvent(user.id, "login", false);
+    return res.status(401).json({ error: "Invalid email or password." });
+  }
+
+  if (user.mfa_enabled) {
+    req.session.pendingMfaUserId = user.id;
+    delete req.session.userId;
+    logEvent(user.id, "password-authentication", true);
 
     return res.json({
-      authenticated: false
+      mfaRequired: true,
+      message: "Enter the code from your authenticator app."
     });
   }
 
+  req.session.userId = user.id;
+  delete req.session.pendingMfaUserId;
+  logEvent(user.id, "login", true);
+
   res.json({
-    authenticated: true,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mfaEnabled: Boolean(user.mfa_enabled),
-      createdAt: user.created_at
+    mfaRequired: false,
+    user: publicUser(user),
+    redirect: "/"
+  });
+});
+
+app.post("/api/auth/verify-mfa", (req, res) => {
+  const pendingId = req.session.pendingMfaUserId;
+  const token = String(req.body.code || "").replace(/\s/g, "");
+
+  if (!pendingId) {
+    return res.status(401).json({ error: "Your login session has expired. Log in again." });
+  }
+
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(pendingId);
+
+  if (!user || !user.mfa_enabled || !user.mfa_secret) {
+    delete req.session.pendingMfaUserId;
+    return res.status(401).json({ error: "MFA verification is not available for this account." });
+  }
+
+  if (!/^\d{6}$/.test(token) || !authenticator.check(token, user.mfa_secret)) {
+    logEvent(user.id, "mfa-verification", false);
+    return res.status(401).json({ error: "Invalid or expired MFA code." });
+  }
+
+  req.session.userId = user.id;
+  delete req.session.pendingMfaUserId;
+  logEvent(user.id, "mfa-verification", true);
+
+  res.json({
+    message: "MFA verified.",
+    user: publicUser(user),
+    redirect: "/"
+  });
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  const user = currentUser(req);
+  if (user) logEvent(user.id, "logout", true);
+
+  req.session.destroy(() => {
+    res.clearCookie("techmart.sid");
+    res.json({ message: "Logged out." });
+  });
+});
+
+app.get("/api/settings", requireAuth, (req, res) => {
+  res.json({
+    user: publicUser(req.user),
+    mfa: {
+      enabled: Boolean(req.user.mfa_enabled)
     }
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| Registration
-|--------------------------------------------------------------------------
-*/
-
-app.post("/api/register", authLimiter, async (req, res) => {
-  try {
-    const name = String(req.body.name || "").trim();
-    const email = normalizeEmail(req.body.email);
-    const password = String(req.body.password || "");
-
-    if (name.length < 2 || name.length > 100) {
-      return res.status(400).json({
-        error: "Please enter a valid name."
-      });
-    }
-
-    if (!validEmail(email)) {
-      return res.status(400).json({
-        error: "Please enter a valid email address."
-      });
-    }
-
-    if (password.length < 8) {
-      return res.status(400).json({
-        error: "Password must contain at least 8 characters."
-      });
-    }
-
-    if (password.length > 128) {
-      return res.status(400).json({
-        error: "Password is too long."
-      });
-    }
-
-    const existingUser = db
-      .prepare("SELECT id FROM users WHERE email = ?")
-      .get(email);
-
-    if (existingUser) {
-      return res.status(409).json({
-        error: "An account with this email already exists."
-      });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    const result = db
-      .prepare(`
-        INSERT INTO users
-        (name, email, password_hash)
-        VALUES (?, ?, ?)
-      `)
-      .run(name, email, passwordHash);
-
-    db.prepare(`
-      INSERT INTO privacy_settings
-      (user_id)
-      VALUES (?)
-    `).run(result.lastInsertRowid);
-
-    res.status(201).json({
-      success: true,
-      message: "Account created successfully."
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-
-    res.status(500).json({
-      error: "Unable to create the account."
-    });
+app.post("/api/mfa/setup", requireAuth, async (req, res) => {
+  if (req.user.mfa_enabled) {
+    return res.status(400).json({ error: "MFA is already enabled." });
   }
-});
 
-/*
-|--------------------------------------------------------------------------
-| Login
-|--------------------------------------------------------------------------
-*/
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.user.id);
+  const secret = authenticator.generateSecret();
+  const issuer = "TechMart";
+  const label = `${issuer}:${user.email}`;
+  const otpauth = authenticator.keyuri(user.email, issuer, secret);
+  const qrDataUrl = await QRCode.toDataURL(otpauth, {
+    width: 280,
+    margin: 2
+  });
 
-app.post("/api/login", authLimiter, async (req, res) => {
-  try {
-    const email = normalizeEmail(req.body.email);
-    const password = String(req.body.password || "");
-
-    if (!validEmail(email) || !password) {
-      return res.status(401).json({
-        error: "Invalid email or password."
-      });
-    }
-
-    const user = db
-      .prepare("SELECT * FROM users WHERE email = ?")
-      .get(email);
-
-    if (!user) {
-      logAttempt({
-        email,
-        success: false,
-        req,
-        attemptType: "password"
-      });
-
-      return res.status(401).json({
-        error: "Invalid email or password."
-      });
-    }
-
-    const passwordCorrect = await bcrypt.compare(
-      password,
-      user.password_hash
-    );
-
-    if (!passwordCorrect) {
-      logAttempt({
-        userId: user.id,
-        email,
-        success: false,
-        req,
-        attemptType: "password"
-      });
-
-      return res.status(401).json({
-        error: "Invalid email or password."
-      });
-    }
-
-    logAttempt({
-      userId: user.id,
-      email,
-      success: true,
-      req,
-      attemptType: "password"
-    });
-
-    /*
-     * If MFA is enabled, create only a temporary
-     * authentication state.
-     */
-    if (user.mfa_enabled) {
-      const challengeId = crypto.randomBytes(32).toString("hex");
-
-      req.session = {
-        mfaPendingUserId: user.id,
-        mfaChallengeId: challengeId,
-        mfaChallengeCreatedAt: Date.now()
-      };
-
-      return res.json({
-        success: true,
-        requiresMfa: true
-      });
-    }
-
-    /*
-     * MFA disabled:
-     * create normal authenticated session.
-     */
-    req.session = {
-      userId: user.id,
-      mfaVerified: false
-    };
-
-    res.json({
-      success: true,
-      requiresMfa: false
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-
-    res.status(500).json({
-      error: "Unable to complete login."
-    });
-  }
-});
-
-/*
-|--------------------------------------------------------------------------
-| MFA login verification
-|--------------------------------------------------------------------------
-*/
-
-app.post("/api/login/mfa", mfaLimiter, (req, res) => {
-  try {
-    const code = String(req.body.code || "").replace(/\s/g, "");
-
-    if (!/^\d{6}$/.test(code)) {
-      return res.status(401).json({
-        error: "Invalid verification code."
-      });
-    }
-
-    const pendingUserId = req.session?.mfaPendingUserId;
-    const challengeId = req.session?.mfaChallengeId;
-    const createdAt = req.session?.mfaChallengeCreatedAt;
-
-    if (!pendingUserId || !challengeId || !createdAt) {
-      return res.status(401).json({
-        error: "Verification session expired."
-      });
-    }
-
-    /*
-     * MFA challenge lifetime: 5 minutes.
-     */
-    if (Date.now() - createdAt > 5 * 60 * 1000) {
-      req.session = null;
-
-      return res.status(401).json({
-        error: "Verification session expired."
-      });
-    }
-
-    const user = getUserWithSecretById(pendingUserId);
-
-    if (!user || !user.mfa_enabled || !user.mfa_secret) {
-      req.session = null;
-
-      return res.status(401).json({
-        error: "Unable to verify the account."
-      });
-    }
-
-    const valid = authenticator.check(
-      code,
-      user.mfa_secret
-    );
-
-    logAttempt({
-      userId: user.id,
-      email: user.email,
-      success: valid,
-      req,
-      attemptType: "mfa"
-    });
-
-    if (!valid) {
-      return res.status(401).json({
-        error: "Invalid verification code."
-      });
-    }
-
-    /*
-     * Convert temporary session into authenticated session.
-     */
-    req.session = {
-      userId: user.id,
-      mfaVerified: true,
-      authenticatedAt: Date.now()
-    };
-
-    res.json({
-      success: true
-    });
-  } catch (error) {
-    console.error("MFA verification error:", error);
-
-    res.status(500).json({
-      error: "Unable to verify the code."
-    });
-  }
-});
-
-/*
-|--------------------------------------------------------------------------
-| Logout
-|--------------------------------------------------------------------------
-*/
-
-app.post("/api/logout", (req, res) => {
-  req.session = null;
+  req.session.pendingMfaSecret = secret;
 
   res.json({
-    success: true
+    qrDataUrl,
+    manualKey: secret,
+    label,
+    issuer
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| MFA enrollment
-|--------------------------------------------------------------------------
-*/
-
-app.post("/api/mfa/setup", requireAuth, (req, res) => {
-  try {
-    if (req.user.mfa_enabled) {
-      return res.status(400).json({
-        error: "Two-step verification is already enabled."
-      });
-    }
-
-    const secret = authenticator.generateSecret();
-
-    const issuer = "TechMart";
-    const accountName = req.user.email;
-
-    const otpauthUrl = authenticator.keyuri(
-      accountName,
-      issuer,
-      secret
-    );
-
-    QRCode.toDataURL(otpauthUrl, {
-      width: 280,
-      margin: 2
-    })
-      .then((qrCode) => {
-        /*
-         * Store the secret temporarily in the session.
-         * It is not enabled until the user proves possession
-         * by entering a valid TOTP code.
-         */
-        req.session.mfaSetupSecret = secret;
-        req.session.mfaSetupCreatedAt = Date.now();
-
-        res.json({
-          success: true,
-          qrCode,
-          manualKey: secret
-        });
-      })
-      .catch((error) => {
-        console.error("QR generation error:", error);
-
-        res.status(500).json({
-          error: "Unable to generate the setup code."
-        });
-      });
-  } catch (error) {
-    console.error("MFA setup error:", error);
-
-    res.status(500).json({
-      error: "Unable to start MFA setup."
-    });
+app.post("/api/mfa/enable", requireAuth, (req, res) => {
+  if (req.user.mfa_enabled) {
+    return res.status(400).json({ error: "MFA is already enabled." });
   }
-});
 
-/*
-|--------------------------------------------------------------------------
-| Confirm MFA enrollment
-|--------------------------------------------------------------------------
-*/
+  const secret = req.session.pendingMfaSecret;
+  const code = String(req.body.code || "").replace(/\s/g, "");
 
-app.post("/api/mfa/confirm", mfaLimiter, requireAuth, (req, res) => {
-  try {
-    const code = String(req.body.code || "").replace(/\s/g, "");
-
-    const secret = req.session?.mfaSetupSecret;
-    const createdAt = req.session?.mfaSetupCreatedAt;
-
-    if (!secret || !createdAt) {
-      return res.status(400).json({
-        error: "Please start MFA setup again."
-      });
-    }
-
-    if (Date.now() - createdAt > 10 * 60 * 1000) {
-      delete req.session.mfaSetupSecret;
-      delete req.session.mfaSetupCreatedAt;
-
-      return res.status(400).json({
-        error: "MFA setup has expired. Please start again."
-      });
-    }
-
-    if (!/^\d{6}$/.test(code)) {
-      return res.status(400).json({
-        error: "Enter the 6-digit verification code."
-      });
-    }
-
-    const valid = authenticator.check(code, secret);
-
-    if (!valid) {
-      return res.status(400).json({
-        error: "Invalid verification code."
-      });
-    }
-
-    db.prepare(`
-      UPDATE users
-      SET mfa_enabled = 1,
-          mfa_secret = ?
-      WHERE id = ?
-    `).run(secret, req.user.id);
-
-    delete req.session.mfaSetupSecret;
-    delete req.session.mfaSetupCreatedAt;
-
-    /*
-     * MFA has now been successfully enabled.
-     */
-    req.session.mfaVerified = true;
-
-    res.json({
-      success: true,
-      message: "Two-step verification has been enabled."
-    });
-  } catch (error) {
-    console.error("MFA confirmation error:", error);
-
-    res.status(500).json({
-      error: "Unable to enable two-step verification."
-    });
+  if (!secret) {
+    return res.status(400).json({ error: "Start MFA setup first." });
   }
-});
 
-/*
-|--------------------------------------------------------------------------
-| Disable MFA
-|--------------------------------------------------------------------------
-*/
-
-app.post("/api/mfa/disable", mfaLimiter, requireAuth, (req, res) => {
-  try {
-    const code = String(req.body.code || "").replace(/\s/g, "");
-
-    const user = getUserWithSecretById(req.user.id);
-
-    if (!user.mfa_enabled || !user.mfa_secret) {
-      return res.status(400).json({
-        error: "Two-step verification is not enabled."
-      });
-    }
-
-    if (!/^\d{6}$/.test(code)) {
-      return res.status(400).json({
-        error: "Enter your current verification code."
-      });
-    }
-
-    const valid = authenticator.check(
-      code,
-      user.mfa_secret
-    );
-
-    if (!valid) {
-      return res.status(400).json({
-        error: "Invalid verification code."
-      });
-    }
-
-    db.prepare(`
-      UPDATE users
-      SET mfa_enabled = 0,
-          mfa_secret = NULL
-      WHERE id = ?
-    `).run(user.id);
-
-    req.session.mfaVerified = false;
-
-    res.json({
-      success: true,
-      message: "Two-step verification has been disabled."
-    });
-  } catch (error) {
-    console.error("MFA disable error:", error);
-
-    res.status(500).json({
-      error: "Unable to disable two-step verification."
-    });
+  if (!/^\d{6}$/.test(code) || !authenticator.check(code, secret)) {
+    return res.status(400).json({ error: "The code is incorrect or expired." });
   }
-});
 
-/*
-|--------------------------------------------------------------------------
-| Change password
-|--------------------------------------------------------------------------
-*/
+  db.prepare(
+    "UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?"
+  ).run(secret, req.user.id);
 
-app.post(
-  "/api/account/password",
-  mfaLimiter,
-  requireAuth,
-  (req, res) => {
-    try {
-      const currentPassword = String(
-        req.body.currentPassword || ""
-      );
+  delete req.session.pendingMfaSecret;
+  logEvent(req.user.id, "mfa-enabled", true);
 
-      const newPassword = String(
-        req.body.newPassword || ""
-      );
-
-      if (!currentPassword || newPassword.length < 8) {
-        return res.status(400).json({
-          error: "Please provide valid password information."
-        });
-      }
-
-      const user = getUserWithSecretById(req.user.id);
-
-      const currentCorrect = bcrypt.compareSync(
-        currentPassword,
-        user.password_hash
-      );
-
-      if (!currentCorrect) {
-        return res.status(400).json({
-          error: "Current password is incorrect."
-        });
-      }
-
-      const newHash = bcrypt.hashSync(
-        newPassword,
-        12
-      );
-
-      db.prepare(`
-        UPDATE users
-        SET password_hash = ?
-        WHERE id = ?
-      `).run(newHash, user.id);
-
-      res.json({
-        success: true,
-        message: "Password changed successfully."
-      });
-    } catch (error) {
-      console.error("Password change error:", error);
-
-      res.status(500).json({
-        error: "Unable to change password."
-      });
-    }
-  }
-);
-
-/*
-|--------------------------------------------------------------------------
-| Privacy settings
-|--------------------------------------------------------------------------
-*/
-
-app.get("/api/settings/privacy", requireAuth, (req, res) => {
-  let settings = db
-    .prepare(`
-      SELECT
-        marketing_emails,
-        personalized_recommendations,
-        profile_visibility
-      FROM privacy_settings
-      WHERE user_id = ?
-    `)
+  const updated = db
+    .prepare("SELECT id, name, email, mfa_enabled FROM users WHERE id = ?")
     .get(req.user.id);
 
-  if (!settings) {
-    db.prepare(`
-      INSERT INTO privacy_settings
-      (user_id)
-      VALUES (?)
-    `).run(req.user.id);
-
-    settings = db
-      .prepare(`
-        SELECT
-          marketing_emails,
-          personalized_recommendations,
-          profile_visibility
-        FROM privacy_settings
-        WHERE user_id = ?
-      `)
-      .get(req.user.id);
-  }
-
   res.json({
-    marketingEmails: Boolean(settings.marketing_emails),
-    personalizedRecommendations: Boolean(
-      settings.personalized_recommendations
-    ),
-    profileVisibility: Boolean(settings.profile_visibility)
+    message: "MFA enabled successfully.",
+    user: publicUser(updated)
   });
 });
 
-app.put(
-  "/api/settings/privacy",
-  requireAuth,
-  (req, res) => {
-    try {
-      const marketingEmails =
-        Boolean(req.body.marketingEmails);
+app.post("/api/mfa/disable", requireAuth, (req, res) => {
+  const code = String(req.body.code || "").replace(/\s/g, "");
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(req.user.id);
 
-      const personalizedRecommendations =
-        Boolean(req.body.personalizedRecommendations);
-
-      const profileVisibility =
-        Boolean(req.body.profileVisibility);
-
-      db.prepare(`
-        INSERT INTO privacy_settings
-        (
-          user_id,
-          marketing_emails,
-          personalized_recommendations,
-          profile_visibility
-        )
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(user_id)
-        DO UPDATE SET
-          marketing_emails = excluded.marketing_emails,
-          personalized_recommendations =
-            excluded.personalized_recommendations,
-          profile_visibility =
-            excluded.profile_visibility
-      `).run(
-        req.user.id,
-        marketingEmails ? 1 : 0,
-        personalizedRecommendations ? 1 : 0,
-        profileVisibility ? 1 : 0
-      );
-
-      res.json({
-        success: true
-      });
-    } catch (error) {
-      console.error("Privacy settings error:", error);
-
-      res.status(500).json({
-        error: "Unable to update privacy settings."
-      });
-    }
+  if (!user.mfa_enabled || !user.mfa_secret) {
+    return res.status(400).json({ error: "MFA is not enabled." });
   }
-);
 
-/*
-|--------------------------------------------------------------------------
-| Orders
-|--------------------------------------------------------------------------
-*/
-
-app.post("/api/orders", requireAuth, (req, res) => {
-  try {
-    const items = Array.isArray(req.body.items)
-      ? req.body.items
-      : [];
-
-    if (items.length === 0) {
-      return res.status(400).json({
-        error: "Your cart is empty."
-      });
-    }
-
-    let total = 0;
-    const validatedItems = [];
-
-    for (const item of items) {
-      const productId = Number(item.productId);
-      const quantity = Number(item.quantity);
-
-      if (
-        !Number.isInteger(productId) ||
-        !Number.isInteger(quantity) ||
-        quantity < 1 ||
-        quantity > 20
-      ) {
-        return res.status(400).json({
-          error: "Invalid cart."
-        });
-      }
-
-      const product = db
-        .prepare(`
-          SELECT id, name, price, stock
-          FROM products
-          WHERE id = ?
-        `)
-        .get(productId);
-
-      if (!product || product.stock < quantity) {
-        return res.status(400).json({
-          error: `Product is unavailable: ${
-            product?.name || "Unknown"
-          }`
-        });
-      }
-
-      total += product.price * quantity;
-
-      validatedItems.push({
-        product,
-        quantity
-      });
-    }
-
-    const createOrder = db.transaction(() => {
-      const order = db
-        .prepare(`
-          INSERT INTO orders
-          (user_id, total_amount, status)
-          VALUES (?, ?, 'Confirmed')
-        `)
-        .run(req.user.id, total);
-
-      const orderId = order.lastInsertRowid;
-
-      const insertItem = db.prepare(`
-        INSERT INTO order_items
-        (order_id, product_id, quantity, price)
-        VALUES (?, ?, ?, ?)
-      `);
-
-      const reduceStock = db.prepare(`
-        UPDATE products
-        SET stock = stock - ?
-        WHERE id = ?
-      `);
-
-      for (const item of validatedItems) {
-        insertItem.run(
-          orderId,
-          item.product.id,
-          item.quantity,
-          item.product.price
-        );
-
-        reduceStock.run(
-          item.quantity,
-          item.product.id
-        );
-      }
-
-      return orderId;
-    });
-
-    const orderId = createOrder();
-
-    res.status(201).json({
-      success: true,
-      orderId,
-      total
-    });
-  } catch (error) {
-    console.error("Order error:", error);
-
-    res.status(500).json({
-      error: "Unable to create the order."
-    });
+  if (!/^\d{6}$/.test(code) || !authenticator.check(code, user.mfa_secret)) {
+    return res.status(400).json({ error: "Enter a valid current MFA code." });
   }
-});
 
-/*
-|--------------------------------------------------------------------------
-| Recent orders
-|--------------------------------------------------------------------------
-*/
+  db.prepare(
+    "UPDATE users SET mfa_enabled = 0, mfa_secret = NULL WHERE id = ?"
+  ).run(req.user.id);
 
-app.get("/api/orders", requireAuth, (req, res) => {
-  const orders = db
-    .prepare(`
-      SELECT
-        id,
-        total_amount,
-        status,
-        created_at
-      FROM orders
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-      LIMIT 10
-    `)
-    .all(req.user.id);
+  logEvent(req.user.id, "mfa-disabled", true);
 
   res.json({
-    orders
+    message: "MFA disabled.",
+    user: {
+      ...publicUser(user),
+      mfaEnabled: false
+    }
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| Fallback
-|--------------------------------------------------------------------------
-*/
-
-app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "public", "index.html")
-  );
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-/*
-|--------------------------------------------------------------------------
-| Start server
-|--------------------------------------------------------------------------
-*/
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: "Internal server error." });
+});
 
-app.listen(PORT, () => {
-  console.log("");
-  console.log("========================================");
-  console.log("        TECHMART IS RUNNING");
-  console.log("========================================");
-  console.log(`http://localhost:${PORT}`);
-  console.log("");
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`TechMart running at http://localhost:${PORT}`);
 });

@@ -1,299 +1,110 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <meta
-    name="description"
-    content="TechMart online electronics store"
-  >
-
-  <title>TechMart — Electronics Store</title>
-
-  <link rel="stylesheet" href="/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TechMart technology store">
+  <title>TechMart — Technology for everyday life</title>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-
 <body>
+  <header class="site-header">
+    <nav class="nav container">
+      <a class="brand" href="/">Tech<span>Mart</span></a>
+      <div class="nav-links">
+        <a href="/products.html">Products</a>
+        <a href="/products.html">Categories</a>
+      </div>
+      <div class="nav-actions">
+        <a class="security-status hidden" id="securityStatus" href="/settings.html"></a>
+        <button class="cart-button" id="cartButton" type="button">Cart <span id="cartCount">0</span></button>
+        <a class="nav-login" id="loginLink" href="/login.html">Login</a>
+        <button class="nav-logout hidden" id="logoutButton" type="button">Logout</button>
+      </div>
+    </nav>
+  </header>
 
-<header class="navbar">
-
-  <a href="/" class="brand">
-    TechMart
-  </a>
-
-  <nav class="nav-links">
-    <a href="#products">Products</a>
-    <a href="#categories">Categories</a>
-  </nav>
-
-  <div class="nav-actions">
-
-    <button
-      id="cartButton"
-      class="nav-button"
-      type="button"
-    >
-      Cart
-      <span id="cartCount" class="cart-count">0</span>
-    </button>
-
-    <div id="securityStatus" class="security-status hidden">
-    </div>
-
-    <a
-      id="accountLink"
-      href="/login.html"
-      class="nav-account"
-    >
-      Login
-    </a>
-
-    <button
-      id="logoutButton"
-      class="nav-button hidden"
-      type="button"
-    >
-      Logout
-    </button>
-
-  </div>
-
-</header>
-
-
-<main>
-
-  <section class="hero">
-
-    <div class="hero-content">
-
-      <p class="eyebrow">
-        Technology for everyday life
-      </p>
-
-      <h1>
-        Better technology.<br>
-        Better choices.
-      </h1>
-
-      <p class="hero-description">
-        Discover laptops, smartphones, audio equipment,
-        accessories and more.
-      </p>
-
-      <a
-        href="#products"
-        class="primary-button"
-      >
-        Shop now
-      </a>
-
-    </div>
-
-    <div class="hero-card">
-
-      <div class="hero-device">
-        <div class="device-screen">
-          <span>TECH</span>
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Technology for everyday life</p>
+          <h1>Better technology.<br>Better choices.</h1>
+          <p class="hero-text">Discover laptops, smartphones, audio equipment, accessories and more.</p>
+          <a class="button button-primary" href="/products.html">Shop now</a>
+        </div>
+        <div class="hero-card">
+          <div class="hero-card-top">TECHMART</div>
+          <div class="hero-device"></div>
+          <div class="hero-card-bottom">
+            <span>Modern tech</span>
+            <span>01—06</span>
+          </div>
         </div>
       </div>
+    </section>
 
-    </div>
-
-  </section>
-
-
-  <section
-    id="categories"
-    class="category-section"
-  >
-
-    <div class="section-heading">
-
-      <div>
-        <p class="eyebrow">
-          Browse
-        </p>
-
-        <h2>
-          Shop by category
-        </h2>
+    <section class="section">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Browse</p>
+            <h2>Shop by category</h2>
+          </div>
+          <a href="/products.html" class="text-link">View all products</a>
+        </div>
+        <div class="category-grid">
+          <a href="/products.html?category=Laptops" class="category-card"><span>01</span><strong>Laptops</strong></a>
+          <a href="/products.html?category=Smartphones" class="category-card"><span>02</span><strong>Smartphones</strong></a>
+          <a href="/products.html?category=Audio" class="category-card"><span>03</span><strong>Audio</strong></a>
+          <a href="/products.html?category=Accessories" class="category-card"><span>04</span><strong>Accessories</strong></a>
+          <a href="/products.html?category=Gaming" class="category-card"><span>05</span><strong>Gaming</strong></a>
+          <a href="/products.html?category=Monitors" class="category-card"><span>06</span><strong>Monitors</strong></a>
+        </div>
       </div>
+    </section>
 
-    </div>
-
-    <div class="category-grid">
-
-      <button
-        class="category-card"
-        data-category="Laptops"
-      >
-        <span class="category-icon">01</span>
-        <span>Laptops</span>
-      </button>
-
-      <button
-        class="category-card"
-        data-category="Smartphones"
-      >
-        <span class="category-icon">02</span>
-        <span>Smartphones</span>
-      </button>
-
-      <button
-        class="category-card"
-        data-category="Audio"
-      >
-        <span class="category-icon">03</span>
-        <span>Audio</span>
-      </button>
-
-      <button
-        class="category-card"
-        data-category="Accessories"
-      >
-        <span class="category-icon">04</span>
-        <span>Accessories</span>
-      </button>
-
-      <button
-        class="category-card"
-        data-category="Gaming"
-      >
-        <span class="category-icon">05</span>
-        <span>Gaming</span>
-      </button>
-
-      <button
-        class="category-card"
-        data-category="Monitors"
-      >
-        <span class="category-icon">06</span>
-        <span>Monitors</span>
-      </button>
-
-    </div>
-
-  </section>
-
-
-  <section
-    id="products"
-    class="products-section"
-  >
-
-    <div class="section-heading">
-
-      <div>
-        <p class="eyebrow">
-          Featured
-        </p>
-
-        <h2>
-          Popular products
-        </h2>
+    <section class="section section-soft">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Featured</p>
+            <h2>Popular products</h2>
+          </div>
+          <a href="/products.html" class="button button-secondary">View all</a>
+        </div>
+        <div class="product-grid" id="featuredProducts">
+          <div class="loading">Loading products...</div>
+        </div>
       </div>
+    </section>
 
-      <button
-        id="showAllProducts"
-        class="text-button"
-        type="button"
-      >
-        View all
-      </button>
-
-    </div>
-
-    <div
-      id="productGrid"
-      class="product-grid"
-    >
-
-      <div class="loading">
-        Loading products...
+    <section class="section security-promo">
+      <div class="container security-promo-inner">
+        <div>
+          <p class="eyebrow">Your selection</p>
+          <h2>Keep your account protected.</h2>
+          <p>Enable multi-factor authentication from Security & Privacy and use an authenticator app for an additional login factor.</p>
+        </div>
+        <a class="button button-primary" href="/settings.html">Security & Privacy</a>
       </div>
+    </section>
+  </main>
 
+  <aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+    <div class="cart-header">
+      <h2>Cart</h2>
+      <button id="closeCart" class="icon-button" type="button" aria-label="Close cart">×</button>
     </div>
-
-  </section>
-
-</main>
-
-
-<div
-  id="cartOverlay"
-  class="overlay hidden"
-></div>
-
-
-<aside
-  id="cartDrawer"
-  class="cart-drawer"
->
-
-  <div class="drawer-header">
-
-    <div>
-      <p class="eyebrow">
-        Your selection
-      </p>
-
-      <h2>
-        Cart
-      </h2>
+    <div id="cartItems" class="cart-items"></div>
+    <div class="cart-footer">
+      <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
+      <button class="button button-primary full-width" id="checkoutButton" type="button">Checkout</button>
     </div>
+  </aside>
+  <div class="drawer-overlay" id="drawerOverlay"></div>
 
-    <button
-      id="closeCart"
-      class="close-button"
-      type="button"
-      aria-label="Close cart"
-    >
-      ×
-    </button>
-
-  </div>
-
-  <div
-    id="cartItems"
-    class="cart-items"
-  >
-  </div>
-
-  <div class="cart-footer">
-
-    <div class="cart-total-row">
-      <span>Total</span>
-      <strong id="cartTotal">
-        ₹0
-      </strong>
-    </div>
-
-    <button
-      id="checkoutButton"
-      class="primary-button full-width"
-      type="button"
-    >
-      Checkout
-    </button>
-
-  </div>
-
-</aside>
-
-
-<div
-  id="toast"
-  class="toast"
-></div>
-
-
-<script src="/app.js"></script>
-
+  <script src="/js/app.js" defer></script>
+  <script src="/js/home.js" defer></script>
 </body>
 </html>
