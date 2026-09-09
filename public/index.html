@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="TechMart online electronics store"
+  >
+
+  <title>TechMart — Electronics Store</title>
+
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+
+<header class="navbar">
+
+  <a href="/" class="brand">
+    TechMart
+  </a>
+
+  <nav class="nav-links">
+    <a href="#products">Products</a>
+    <a href="#categories">Categories</a>
+  </nav>
+
+  <div class="nav-actions">
+
+    <button
+      id="cartButton"
+      class="nav-button"
+      type="button"
+    >
+      Cart
+      <span id="cartCount" class="cart-count">0</span>
+    </button>
+
+    <div id="securityStatus" class="security-status hidden">
+    </div>
+
+    <a
+      id="accountLink"
+      href="/login.html"
+      class="nav-account"
+    >
+      Login
+    </a>
+
+    <button
+      id="logoutButton"
+      class="nav-button hidden"
+      type="button"
+    >
+      Logout
+    </button>
+
+  </div>
+
+</header>
+
+
+<main>
+
+  <section class="hero">
+
+    <div class="hero-content">
+
+      <p class="eyebrow">
+        Technology for everyday life
+      </p>
+
+      <h1>
+        Better technology.<br>
+        Better choices.
+      </h1>
+
+      <p class="hero-description">
+        Discover laptops, smartphones, audio equipment,
+        accessories and more.
+      </p>
+
+      <a
+        href="#products"
+        class="primary-button"
+      >
+        Shop now
+      </a>
+
+    </div>
+
+    <div class="hero-card">
+
+      <div class="hero-device">
+        <div class="device-screen">
+          <span>TECH</span>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <section
+    id="categories"
+    class="category-section"
+  >
+
+    <div class="section-heading">
+
+      <div>
+        <p class="eyebrow">
+          Browse
+        </p>
+
+        <h2>
+          Shop by category
+        </h2>
+      </div>
+
+    </div>
+
+    <div class="category-grid">
+
+      <button
+        class="category-card"
+        data-category="Laptops"
+      >
+        <span class="category-icon">01</span>
+        <span>Laptops</span>
+      </button>
+
+      <button
+        class="category-card"
+        data-category="Smartphones"
+      >
+        <span class="category-icon">02</span>
+        <span>Smartphones</span>
+      </button>
+
+      <button
+        class="category-card"
+        data-category="Audio"
+      >
+        <span class="category-icon">03</span>
+        <span>Audio</span>
+      </button>
+
+      <button
+        class="category-card"
+        data-category="Accessories"
+      >
+        <span class="category-icon">04</span>
+        <span>Accessories</span>
+      </button>
+
+      <button
+        class="category-card"
+        data-category="Gaming"
+      >
+        <span class="category-icon">05</span>
+        <span>Gaming</span>
+      </button>
+
+      <button
+        class="category-card"
+        data-category="Monitors"
+      >
+        <span class="category-icon">06</span>
+        <span>Monitors</span>
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <section
+    id="products"
+    class="products-section"
+  >
+
+    <div class="section-heading">
+
+      <div>
+        <p class="eyebrow">
+          Featured
+        </p>
+
+        <h2>
+          Popular products
+        </h2>
+      </div>
+
+      <button
+        id="showAllProducts"
+        class="text-button"
+        type="button"
+      >
+        View all
+      </button>
+
+    </div>
+
+    <div
+      id="productGrid"
+      class="product-grid"
+    >
+
+      <div class="loading">
+        Loading products...
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<div
+  id="cartOverlay"
+  class="overlay hidden"
+></div>
+
+
+<aside
+  id="cartDrawer"
+  class="cart-drawer"
+>
+
+  <div class="drawer-header">
+
+    <div>
+      <p class="eyebrow">
+        Your selection
+      </p>
+
+      <h2>
+        Cart
+      </h2>
+    </div>
+
+    <button
+      id="closeCart"
+      class="close-button"
+      type="button"
+      aria-label="Close cart"
+    >
+      ×
+    </button>
+
+  </div>
+
+  <div
+    id="cartItems"
+    class="cart-items"
+  >
+  </div>
+
+  <div class="cart-footer">
+
+    <div class="cart-total-row">
+      <span>Total</span>
+      <strong id="cartTotal">
+        ₹0
+      </strong>
+    </div>
+
+    <button
+      id="checkoutButton"
+      class="primary-button full-width"
+      type="button"
+    >
+      Checkout
+    </button>
+
+  </div>
+
+</aside>
+
+
+<div
+  id="toast"
+  class="toast"
+></div>
+
+
+<script src="/app.js"></script>
+
+</body>
+</html>
