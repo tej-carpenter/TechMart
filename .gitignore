@@ -1,0 +1,7 @@
+node_modules/
+.env
+techmart.db
+techmart.db-shm
+techmart.db-wal
+.DS_Store
+npm-debug.log*
